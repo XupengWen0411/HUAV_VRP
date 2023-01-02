@@ -8,42 +8,42 @@ class FCM:
         self.airports = airports
         self.cnum = clust_num
         self.sample_num=data.shape[0]
-        self.dim = data.shape[-1]               # 数据最后一维度数
+        self.dim = data.shape[-1]
         self.m = 2
-        self.dict_cluster = []                  # 分好类的客户点
-        Jlist=[]                                # 存储目标函数计算值的矩阵
+        self.dict_cluster = []
+        Jlist=[]
         U = self.Initial_U(self.sample_num, self.cnum)
-        for i in range(0, iter_num):            # 迭代次数默认为10
+        for i in range(0, iter_num):            #
             C = self.Cen_Iter(self.data, U, self.cnum)
             U = self.U_Iter(U, C)
-            print("第%d次迭代" %(i+1) ,end="")
-            print("聚类中心",C)
-            J = self.J_calcu(self.data, U, C)   # 计算目标函数
+            print("The %d th iterations" %(i+1) ,end="")
+            print("Cluster center",C)
+            J = self.J_calcu(self.data, U, C)
             Jlist = np.append(Jlist, J)
-        self.label = np.argmax(U, axis=0)       # 所有样本的分类标签
-        self.Clast = C                          # 最后的类中心矩阵
-        self.Jlist = Jlist                      # 存储目标函数计算值的矩阵
+        self.label = np.argmax(U, axis=0)       # Clustering label
+        self.Clast = C                          # Cluster center matrix
+        self.Jlist = Jlist                      # Objective function value matrix
 
-    # 初始化隶属度矩阵U
+    # Initialize membership matrix U
     def Initial_U(self, sample_num, cluster_n):
-        U = np.random.rand(sample_num, cluster_n)  # sample_num为样本个数, cluster_n为分类数
-        row_sum = np.sum(U, axis=1)             # 按行求和 row_sum: sample_num*1
-        row_sum = 1 / row_sum                   # 该矩阵每个数取倒数
-        U = np.multiply(U.T, row_sum)           # 确保U的每列和为1 (cluster_n*sample_num).*(sample_num*1)
-        return U                                # cluster_n*sample_num
+        U = np.random.rand(sample_num, cluster_n)
+        row_sum = np.sum(U, axis=1)
+        row_sum = 1 / row_sum
+        U = np.multiply(U.T, row_sum)
+        return U
 
-    # 计算类中心
+    # Calculate cluster center
     def Cen_Iter(self, data, U, cluster_n):
-        c_new = np.empty(shape=[0, self.dim])   # self.dim为样本矩阵的最后一维度
-        for i in range(0, cluster_n):           # 如散点的dim为2，图片像素值的dim为1
-            u_ij_m = U[i, :] ** self.m          # (sample_num,)
+        c_new = np.empty(shape=[0, self.dim])
+        for i in range(0, cluster_n):
+            u_ij_m = U[i, :] ** self.m
             sum_u = np.sum(u_ij_m)
-            ux = np.dot(u_ij_m, data)           # (dim,)
-            ux = np.reshape(ux, (1, self.dim))  # (1,dim)
-            c_new = np.append(c_new, ux / sum_u, axis=0)   # 按列的方向添加类中心到类中心矩阵
+            ux = np.dot(u_ij_m, data)
+            ux = np.reshape(ux, (1, self.dim))
+            c_new = np.append(c_new, ux / sum_u, axis=0)
         return c_new                            # cluster_num*dim
 
-    # 隶属度矩阵迭代
+    # Iteration of membership matrix
     def U_Iter(self, U, c):
         for i in range(0, self.cnum):
             for j in range(0, self.sample_num):
@@ -55,6 +55,7 @@ class FCM:
                 U[i, j] = 1 / sum
         return U
 
+    # Calculate cluster cost value
     def J_calcu(self, data, U, c):
         temp1 = np.zeros(U.shape)
         for i in range(0, U.shape[0]):
@@ -63,6 +64,7 @@ class FCM:
         J = np.sum(np.sum(temp1))
         return J
 
+    # Distance matrix calculation
     def distance(self, city_location):
         city_count = len(city_location)
         dis = [[0] * city_count for i in range(city_count)]
@@ -75,6 +77,7 @@ class FCM:
                     dis[i][j] = 0
         return dis
 
+    #  cluster Circle
     def clusterCircle(self):
         typeIndex = []
         for type in self.label:
@@ -99,6 +102,7 @@ class FCM:
             maxDisA.append([key, [maxDis, averageX, averageY]])
         return maxDisA
 
+    # Adjust Cluster By Weight
     def adjustClusterByWeight(self, cluster, weight, maximumLoad):
         sumWeight = sum(weight)
         if (sumWeight < maximumLoad):

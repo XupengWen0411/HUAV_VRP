@@ -4,22 +4,22 @@ import matplotlib.pyplot as plt
 class VNS_TS:
     def __init__(self, city_location):
         self.city_location = city_location
-        self.city_count = len(self.city_location)        # 总的城市数
-        self.city_num = list(range(0, self.city_count))  # 城市编号
+        self.city_count = len(self.city_location)
+        self.city_num = list(range(0, self.city_count))
         self.dis = self.distance()
-        self.origin = 1                                  # 设置起点和终点城市
+        self.origin = 1
         self.remain_cities = self.city_num[:]
-        self.remain_cities.remove(self.origin)           # 迭代过程中变动的城市
+        self.remain_cities.remove(self.origin)
         self.remain_count = self.city_count - 1
-        self.improve_count = 100                         # 改良次数
-        self.candiate_routes_size = 1.5*self.city_count  # 邻域规模(这个值需要根据客户点的数量来改变)
+        self.improve_count = 100
+        self.candiate_routes_size = 1.5*self.city_count
         self.tabu_size = 10
-        self.tabu_list = []                              # 禁忌表
+        self.tabu_list = []
         self.best_so_far_cost = 0
         self.best_so_far_route = []
         self.tabu_list = []
 
-    #计算距离邻接矩阵
+    # Calculate distance adjacency matrix
     def distance(self):
         dis =[[0]*self.city_count for i in range(self.city_count)]
         for i in range(self.city_count):
@@ -32,18 +32,18 @@ class VNS_TS:
 
     def route_mile_cost(self,route):
         '''
-        计算路径的里程
+        Calculate distance cost
         '''
         mile_cost = 0.0
-        mile_cost += self.dis[self.origin-1][route[0]-1]    # 从起始点开始
-        for i in range(self.remain_count-1):                # 路径的长度
+        mile_cost += self.dis[self.origin-1][route[0]-1]
+        for i in range(self.remain_count-1):
             mile_cost += self.dis[route[i]-1][route[i+1]-1]
-        mile_cost += self.dis[route[-1]-1][self.origin-1]   # 到终点结束
+        mile_cost += self.dis[route[-1]-1][self.origin-1]
         return mile_cost
 
     def random_initial_route(self,remain_cities):
         '''
-        随机生成初始路径
+        Generate Initial Route
         '''
         initial_route = remain_cities[:]
         random.shuffle(initial_route)
@@ -52,7 +52,7 @@ class VNS_TS:
 
     def improve_circle(self,remain_cities):
         '''
-        改良圈算法生成初始路径
+        Improved algorithm to generate initial route
         '''
         initial_route = remain_cities[:]
         random.shuffle(initial_route)
@@ -62,12 +62,11 @@ class VNS_TS:
         j = 0
         while j < self.improve_count:
             new_route = route[:]
-            #随机交换两个点
             index0,index1 = random.sample(label,2)
             new_route[index0],new_route[index1]= new_route[index1],new_route[index0]
             cost1 = self.route_mile_cost(new_route[1:-1])
             improve = cost1 - cost0
-            if improve < 0: #交换两点后有改进
+            if improve < 0: #交Improvements after exchanging two nodes
                 route = new_route[:]
                 cost0 = cost1
                 j += 1
@@ -76,7 +75,7 @@ class VNS_TS:
         initial_route = route[1:-1]
         return initial_route,cost0
 
-    #获取当前邻居城市中距离最短的1个
+    # Get the shortest city in the current neighbor city
     def nearest_city(self,current_city,cand_cities):
         temp_min = float('inf')
         next_city = None
@@ -89,26 +88,24 @@ class VNS_TS:
 
     def greedy_initial_route(self,remain_cities):
         '''
-        采用贪婪算法生成初始解。从第一个城市出发找寻与其距离最短的城市并标记，
-        然后继续找寻与第二个城市距离最短的城市并标记，直到所有城市被标记完。
-        最后回到第一个城市(起点城市)
+        Using greedy algorithm to generate initial solution
         '''
         cand_cities = remain_cities[:]
         current_city = self.origin
         mile_cost = 0
         initial_route = []
         while len(cand_cities) > 0:
-            next_city,distance = self.nearest_city(current_city,cand_cities) #找寻最近的城市及其距离
+            next_city,distance = self.nearest_city(current_city,cand_cities)
             mile_cost += distance
-            initial_route.append(next_city)             #将下一个城市添加到路径列表中
-            current_city = next_city                    #更新当前城市
-            cand_cities.remove(next_city)               #更新未定序的城市
-        mile_cost += self.dis[initial_route[-1]-1][0]   #回到起点
+            initial_route.append(next_city)
+            current_city = next_city
+            cand_cities.remove(next_city)
+        mile_cost += self.dis[initial_route[-1]-1][0]
         return initial_route,mile_cost
 
     def random_swap_2_city(self,route):
         '''
-        随机选取两个城市并将这两个城市之间的点倒置,计算其里程成本
+        2-opt swap operator
         '''
         new_route = route[:]
         swap_2_city = random.sample(route,2)
@@ -123,49 +120,53 @@ class VNS_TS:
 
     def generate_new_route(self,route):
         '''
-        生成新的路线
+        Generate new route
         '''
-        candidate_routes = []                   #路线候选集合
-        candidate_mile_cost = []                #候选集合路线对应的里程成本
-        candidate_swap = []                     #交换元素
+        candidate_routes = []
+        candidate_mile_cost = []
+        candidate_swap = []
         while len(candidate_routes) < self.candiate_routes_size:
             cand_route,cand_swap = self.random_swap_2_city(route)
-            if cand_swap not in candidate_swap: #此次生成新路线的过程中，没有被交换过
+            if cand_swap not in candidate_swap:
                 candidate_routes.append(cand_route)
                 candidate_swap.append(cand_swap)
                 candidate_mile_cost.append(self.route_mile_cost(cand_route))
         min_mile_cost = min(candidate_mile_cost)
         i = candidate_mile_cost.index(min_mile_cost)
-        #如果此次交换集的最优值比历史最优值更好，则更新历史最优值和最优路线
+        # If the optimal value of this exchange set is better than the historical optimal value,
+        # update the historical optimal value and the optimal route
         if min_mile_cost < self.best_so_far_cost:
             self.best_so_far_cost = min_mile_cost
             self.best_so_far_route = candidate_routes[i]
             new_route = candidate_routes[i]
             if candidate_swap[i] in self.tabu_list:
-                self.tabu_list.remove(candidate_swap[i]) #藐视法则
+                self.tabu_list.remove(candidate_swap[i]) # Flout law
             elif len(self.tabu_list) >= self.tabu_size:
                 self.tabu_list.remove(self.tabu_list[0])
             self.tabu_list.append(candidate_swap[i])
         else:
-            #此次交换集未找到更优路径，则选择交换方式未在禁忌表中的次优
+            # If no better route is found for this exchange set,
+            # the sub optimal exchange method not in the tabu list will be selected
             K = self.candiate_routes_size
             stop_value = K - len(self.tabu_list) - 1
             while K > stop_value:
                 min_mile_cost = min(candidate_mile_cost)
                 i = candidate_mile_cost.index(min_mile_cost)
-                #如果此次交换集的最优值比历史最优值更好，则更新历史最优值和最优路线
+                # If the optimal value of this exchange set is better than the historical optimal value,
+                # update the historical optimal value and the optimal route
                 if min_mile_cost < self.best_so_far_cost:
                     self.best_so_far_cost = min_mile_cost
                     self.best_so_far_route = candidate_routes[i]
                     new_route = candidate_routes[i]
                     if candidate_swap[i] in self.tabu_list:
-                        self.tabu_list.remove(candidate_swap[i]) #藐视法则
+                        self.tabu_list.remove(candidate_swap[i]) # Flout law
                     elif len(self.tabu_list) >= self.tabu_size:
                         self.tabu_list.remove(self.tabu_list[0])
                     self.tabu_list.append(candidate_swap[i])
                     break
                 else:
-                    #此次交换集未找到更优路径，则选择交换方式未在禁忌表中的次优
+                    # If no better route is found for this exchange set,
+                    # the sub optimal exchange method not in the tabu list will be selected
                     if candidate_swap[i] not in self.tabu_list:
                         self.tabu_list.append(candidate_swap[i])
                         new_route = candidate_routes[i]
@@ -180,13 +181,11 @@ class VNS_TS:
         return new_route
 
     def tabu_search(self,remain_cities,iteration_count=400):
-        #生成初始解
         self.best_so_far_route,self.best_so_far_cost =self.greedy_initial_route(remain_cities)
         # best_so_far_route,best_so_far_cost = random_initial_route(remain_cities)
         # best_so_far_route,best_so_far_cost = improve_circle(remain_cities)
-        record = [self.best_so_far_cost] #记录每一次搜索后的最优值
+        record = [self.best_so_far_cost]
         new_route = self.best_so_far_route[:]
-        #生成邻域
         for j in range(iteration_count):
             new_route = self.generate_new_route(new_route)
             record.append(self.best_so_far_cost)
@@ -194,7 +193,6 @@ class VNS_TS:
         return final_route,self.best_so_far_cost,record
 
     def plot(self, N, mile_cost, record, satisfactory_solution, city_location):
-        # 绘制路线图
         X = []
         Y = []
         for i in satisfactory_solution:
@@ -203,19 +201,18 @@ class VNS_TS:
             X.append(x)
             Y.append(y)
         plt.plot(X, Y, '-o')
-        plt.title("大无人机路径规划图:%d" % (int(mile_cost)))
+        plt.title("Large drone routes:%d" % (int(mile_cost)))
         plt.show()
-        # 绘制迭代过程图
-        A = [i for i in range(N + 1)]   # 横坐标
-        B = record[:]                   # 纵坐标
+
+        A = [i for i in range(N + 1)]
+        B = record[:]
         plt.xlim(0, N)
-        plt.xlabel('迭代次数', fontproperties="SimSun")
-        plt.ylabel('路径里程', fontproperties="SimSun")
-        plt.title("solution of TS changed with iteration")
+        plt.xlabel('Iterations', fontproperties="SimSun")
+        plt.ylabel('Route distance', fontproperties="SimSun")
+        plt.title("Solution of TS changed with iteration")
         plt.plot(A, B, '-')
         plt.show()
 
-#读取坐标文件
 def loadData():
     filename = 'Data\Random\data50.txt'
     city_location = []
@@ -229,7 +226,7 @@ def loadData():
     return city_location
 
 if __name__ == '__main__':
-    N = 100         #迭代次数
+    N = 100         # The number of iterations
     time_start = time.time()
     city_location = loadData()
     vns_ts = VNS_TS(city_location)
@@ -237,6 +234,6 @@ if __name__ == '__main__':
     time_end = time.time()
     time_cost = time_end - time_start
     print('time cost:', time_cost)
-    print("优化里程成本:%d" %(int(mile_cost)))
-    print("优化路径:\n", satisfactory_solution)
+    print("Costs:%d" %(int(mile_cost)))
+    print("Optimization Routes:\n", satisfactory_solution)
     vns_ts.plot(N, mile_cost, record, satisfactory_solution, vns_ts.city_location)

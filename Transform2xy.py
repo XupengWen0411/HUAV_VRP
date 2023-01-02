@@ -2,6 +2,7 @@ import math
 import numpy as np
 
 
+# Coordinate transformation
 class Transform2xy:
     def __init__(self, datas):
         self.xy_coordinate = np.zeros((len(datas), 2))  # 转换后的XY坐标集
@@ -15,10 +16,11 @@ class Transform2xy:
 
     def millerToXY(self, lon, lat):
         """
-        经纬度转换为平面坐标系中的x,y 利用米勒坐标系
-        :param lon: 经度
-        :param lat: 维度
-        :return:
+        Use Miller coordinate system to convert longitude and latitude
+        into x, y in plane coordinate system
+        :param lon: longitude
+        :param lat: latitude
+        :return x, y
         """
         L = 6381372*math.pi*2
         W = L
